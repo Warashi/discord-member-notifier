@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/containrrr/shoutrrr"
@@ -31,12 +32,24 @@ func _main() error {
 		return fmt.Errorf("discordgo.New: %w", err)
 	}
 	defer discord.Close()
+	discord.Identify.Intents = discordgo.IntentsAll
+	discord.State = discordgo.NewState()
+	discord.Open()
+	for !discord.DataReady {
+		time.Sleep(10 * time.Millisecond)
+	}
 
-	guild, err := discord.Guild(serverID)
-
+	guild, err := discord.State.Guild(serverID)
+	if err != nil {
+		return fmt.Errorf("discord.State.Guild: %w", err)
+	}
 	userIDNickMap := make(map[string]string, len(guild.Members))
 	for _, member := range guild.Members {
-		userIDNickMap[member.User.ID] = member.Nick
+		if member.Nick != "" {
+			userIDNickMap[member.User.ID] = member.Nick
+		} else {
+			userIDNickMap[member.User.ID] = member.User.Username
+		}
 	}
 	channelIDNameMap := make(map[string]string, len(guild.Channels))
 	for _, channel := range guild.Channels {
@@ -49,7 +62,7 @@ func _main() error {
 	}
 
 	builder := new(strings.Builder)
-	fmt.Fprintf(builder, "Discord (%s) のボイスチャンネルにいる人たちをお知らせします。", guild.Name)
+	fmt.Fprintf(builder, "Discord (%s) のボイスチャンネルにいる人たちをお知らせします。\n", guild.Name)
 	for channelID, memberIDs := range channelMembers {
 		channelName := channelIDNameMap[channelID]
 		memberNames := make([]string, 0, len(memberIDs))
@@ -59,7 +72,12 @@ func _main() error {
 		fmt.Fprintf(builder, "%s : %s\n", channelName, strings.Join(memberNames, ", "))
 	}
 
-	if err := sender.Send(builder.String(), nil); err != nil {
-		return fmt.Errorf("sender.Send: %w", err)
+	_ = sender
+	for _, err := range sender.Send(builder.String(), nil) {
+		if err != nil {
+			return fmt.Errorf("sender.Send: %v", err)
+		}
 	}
+
+	return nil
 }
