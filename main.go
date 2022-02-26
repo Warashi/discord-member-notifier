@@ -61,6 +61,10 @@ func _main() error {
 		channelMembers[state.ChannelID] = append(channelMembers[state.ChannelID], state.UserID)
 	}
 
+	if len(channelMembers) == 0 {
+		return nil
+	}
+
 	builder := new(strings.Builder)
 	fmt.Fprintf(builder, "Discord (%s) のボイスチャンネルにいる人たちをお知らせします。\n", guild.Name)
 	for channelID, memberIDs := range channelMembers {
