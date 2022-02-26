@@ -72,7 +72,6 @@ func _main() error {
 		fmt.Fprintf(builder, "%s : %s\n", channelName, strings.Join(memberNames, ", "))
 	}
 
-	_ = sender
 	for _, err := range sender.Send(builder.String(), nil) {
 		if err != nil {
 			return fmt.Errorf("sender.Send: %v", err)
